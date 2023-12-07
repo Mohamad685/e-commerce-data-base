@@ -1,7 +1,7 @@
 <?php
-header('Access-Controll-Allow-Origin:*');
+header('Access-Control-Allow-Origin:*');
 include("connection.php");
-require __DIR__ . '/vendor/autoload.php';
+require 'vendor/autoload.php';
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\ExpiredException;
@@ -26,18 +26,20 @@ if (!$token) {
 try {
     $key = "your_secret";
     $decoded = JWT::decode($token, new Key($key, 'HS256'));
-    if ($decoded->is_seller == 1) {
+    if ($decoded-> is_seller == 1) {
         $product_id = $_POST['product_id'];
 
 $query = $mysqli->prepare('DELETE FROM products WHERE product_id=?');
 $query->bind_param('i', $product_id);
 
-if ($query->execute()) {
-    echo json_encode(['status' => 'success', 'message' => 'Product deleted successfully']);
-} else {
-    echo json_encode(['status' => 'error', 'message' => 'Failed to delete product']);
+$query -> execute();
+if ($mysqli-> affected_rows>0){
+    $response['message']="Product deleted successfully.";
+    
+}else{
+    $response['message']="Error deleting the product.";
 }
-
+echo json_encode($response);
 
     } else {
 
