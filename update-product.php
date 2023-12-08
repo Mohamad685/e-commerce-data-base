@@ -1,5 +1,5 @@
 <?php
-header('Access-Controll-Allow-Origin:*');
+header('Access-Control-Allow-Origin:*');
 include("connection.php");
 require __DIR__ . '/vendor/autoload.php';
 
@@ -32,19 +32,32 @@ try {
         $description = $_POST['description'];
         $price = $_POST['price'];
         $stock_quantity = $_POST['stock_quantity'];
-        $query = $mysqli->prepare('UPDATE products SET product_name=?, description=?, price=?, stock_quantity=? WHERE product_id=?');
-        $query->bind_param('ssdii', $product_name, $description, $price, $stock_quantity, $product_id);
+        
+        // Ensure the product being updated belongs to the seller
+        $checkOwnership = $mysqli->prepare('SELECT seller_id FROM products WHERE product_id = ?');
+        $checkOwnership->bind_param('i', $product_id);
+        $checkOwnership->execute();
+        $checkOwnershipResult = $checkOwnership->get_result()->fetch_assoc();
 
-if ($query->execute()) {
-    echo json_encode(['status' => 'success', 'message' => 'Product updated successfully']);
-} else {
-    echo json_encode(['status' => 'error', 'message' => 'Failed to update product']);
-}
+        if (!$checkOwnershipResult || $checkOwnershipResult['seller_id'] != $decoded->user_id) {
+            // Unauthorized access: Seller doesn't own the product
+            $response = ["status" => "error", "message" => "Unauthorized access"];
+            echo json_encode($response);
+            exit();
+        }
 
+        $updateQuery = $mysqli->prepare('UPDATE products SET product_name=?, description=?, price=?, stock_quantity=? WHERE product_id=?');
+        $updateQuery->bind_param('ssdii', $product_name, $description, $price, $stock_quantity, $product_id);
+
+        if ($updateQuery->execute()) {
+            echo json_encode(['status' => 'success', 'message' => 'Product updated successfully']);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Failed to update product']);
+        }
     } else {
-
-        $response = [];
-        $response["permissions"] = false;
+        // Unauthorized access: User is not a seller
+        $response = ["status" => "error", "message" => "Unauthorized access"];
+        echo json_encode($response);
     }
 } catch (ExpiredException $e) {
     http_response_code(401);
@@ -53,14 +66,8 @@ if ($query->execute()) {
     http_response_code(401);
     echo json_encode(["error" => "Invalid token"]);
 }
-$mysqli ->close();
-$query->close();
 
+$mysqli->close();
+$checkOwnership->close();
+$updateQuery->close();
 ?>
-
-
-
-
-
-
-

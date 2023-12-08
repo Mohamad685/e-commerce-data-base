@@ -27,20 +27,24 @@ try {
     $key = "your_secret";
     $decoded = JWT::decode($token, new Key($key, 'HS256'));
     if ($decoded->is_seller == 0 || $decoded->is_seller == 1) {
-        $query = $mysqli->prepare('SELECT *FROM products');
-$query->execute();
+        if ($decoded->is_seller == 1) {
+            $query = $mysqli->prepare('SELECT * FROM products WHERE seller_id = ?');
+            $query->bind_param('i', $decoded->user_id);
+        } else {
+            $query = $mysqli->prepare('SELECT * FROM products');
+        }
 
-$array = $query->get_result();
-$response = [];
-
-while ($product = $array->fetch_assoc()) {
-    $response[] = $product;
-}
-
-    } else {
-
+        $query->execute();
+        $array = $query->get_result();
         $response = [];
-        $response["permissions"] = false;
+
+        while ($product = $array->fetch_assoc()) {
+            $response[] = $product;
+        }
+
+        $query->close();
+    } else {
+        $response = ["permissions" => false];
     }
     echo json_encode($response);
 } catch (ExpiredException $e) {
@@ -50,5 +54,5 @@ while ($product = $array->fetch_assoc()) {
     http_response_code(401);
     echo json_encode(["error" => "Invalid token"]);
 }
-$mysqli ->close();
+$mysqli->close();
 ?>
