@@ -26,7 +26,7 @@ if (!$token) {
 try {
     $key = "your_secret";
     $decoded = JWT::decode($token, new Key($key, 'HS256'));
-    if ($decoded->is_seller == 0) {
+    if ($decoded->is_seller == 0 || $decoded->is_seller == 1) {
         $query = $mysqli->prepare('SELECT *FROM products');
 $query->execute();
 
